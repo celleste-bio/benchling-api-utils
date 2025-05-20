@@ -227,6 +227,7 @@ end
 api_utils.query = query
 api_utils.create = create
 api_utils.update = update
+api_utils.get_oauth_token = get_oauth_token
 
 -- Export the module
 return api_utils
