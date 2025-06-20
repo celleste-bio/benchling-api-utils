@@ -175,21 +175,6 @@ local function update(config, endpoint, payload, version)
     return response_body
 end
 
--- Retrieves a project ID by project name
-local function get_project_id(config)
-    local projects_raw = query_benchling(config, "projects")
-    local project_id = ""
-
-    for _, project in pairs(projects_raw) do
-        if project["name"] == config["benchling"]["project"] then
-            project_id = project["id"]
-            break
-        end
-    end
-
-    return project_id
-end
-
 -- Get OAuth2 token using client_credentials
 local function get_oauth_token(domain, client_id, client_secret)
     local token_url = string.format("https://%s/api/v2/token", domain)
