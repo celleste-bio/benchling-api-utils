@@ -18,6 +18,17 @@ local function encode_key(str)
     return key_encoded
 end
 
+-- URL-encode a string
+local function url_encode(str)
+    if str == nil then return "" end
+    str = tostring(str)
+    str = str:gsub("\n", "\r\n")
+    str = str:gsub("([^%w%-_%.%~])", function(c)
+        return string.format("%%%02X", string.byte(c))
+    end)
+    return str
+end
+
 local function length(containable)
     local cnt
     if type(containable) == "string" then
@@ -103,7 +114,7 @@ local function paginated_api_request(base_url, credentials, method, payload, end
 
         if kwargs then
             for key, value in pairs(kwargs) do
-                table.insert(endpoint_params, key .. "=" .. value)
+                table.insert(endpoint_params, url_encode(key) .. "=" .. url_encode(value))
             end
         end
 
