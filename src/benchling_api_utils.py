@@ -41,8 +41,8 @@ def paginated_api_request(base_url, credentials, method, payload, endpoint_key, 
     return all_results
 
 def request_handler(config, endpoint, method="GET", payload=None, version="v2", params=None):
-    domain = config["benchling"]["domain"]
-    api_key = config["benchling"]["api_key"]
+    domain = confi["domain"]
+    api_key = config["api_key"]
     base_url = f"https://{domain}/api/{version}/{endpoint}"
     endpoint_key = "items" if version == "v3-alpha" else kebab_to_camel_case(endpoint)
     return paginated_api_request(base_url, api_key, method, payload, endpoint_key, params)

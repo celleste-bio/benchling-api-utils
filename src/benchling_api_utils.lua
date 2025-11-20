@@ -145,8 +145,8 @@ local function query(config, endpoint, kwargs, version)
 	}
 
 	local endpoint_key = endpoint_key_map[version]
-    local credentials = config["benchling"]["api_key"]
-    local base_url = string.format("https://%s/api/%s/%s", config["benchling"]["domain"], version, endpoint)
+    local credentials = config["api_key"]
+    local base_url = string.format("https://%s/api/%s/%s", config["domain"], version, endpoint)
     local response_body = paginated_api_request(base_url, credentials, "GET", nil, endpoint_key, kwargs)
         
     return response_body
@@ -162,8 +162,8 @@ local function create(config, endpoint, payload, version)
 	}
 
 	local endpoint_key = endpoint_key_map[version]
-    local credentials = config["benchling"]["api_key"]
-    local base_url = string.format("https://%s/api/%s/%s", config["benchling"]["domain"], version, endpoint)
+    local credentials = config["api_key"]
+    local base_url = string.format("https://%s/api/%s/%s", config["domain"], version, endpoint)
     local response_body = paginated_api_request(base_url, credentials, "POST", json.encode(payload), endpoint_key)
         
     return response_body
@@ -179,8 +179,8 @@ local function update(config, endpoint, payload, version)
 	}
 
 	local endpoint_key = endpoint_key_map[version]
-    local credentials = config["benchling"]["api_key"]
-    local base_url = string.format("https://%s/api/%s/%s", config["benchling"]["domain"], version, endpoint)
+    local credentials = config["api_key"]
+    local base_url = string.format("https://%s/api/%s/%s", config["domain"], version, endpoint)
     local response_body = paginated_api_request(base_url, credentials, "PATCH", json.encode(payload), endpoint_key)
         
     return response_body

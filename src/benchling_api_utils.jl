@@ -87,8 +87,8 @@ function query(config, endpoint::String; kwargs...)::Dict
             next_token = ""  # Only in the first iteration
         end
         # set the authentication header with the correct API key
-        auth_header = encode_key(config["benchling"]["api_key"])
-        url = "https://$(config["benchling"]["domain"])/api/v2/$endpoint?"
+        auth_header = encode_key(confi["api_key"])
+        url = "https://$(config["domain"])/api/v2/$endpoint?"
         if next_token != ""
             url += "nextToken=$next_token"
         end
@@ -117,8 +117,8 @@ create benchling
 """
 function create(config, endpoint::String, payload::Dict{String, Any})::Nothing
     # set the authentication header with the correct API key
-    auth_header = encode_key(config["benchling"]["api_key"])
-    url = "https://$(config["benchling"]["domain"])/api/v2/$endpoint?"
+    auth_header = encode_key(config["api_key"])
+    url = "https://$(config["domain"])/api/v2/$endpoint?"
 
     # convert payload to JSON string
     json_payload = JSON.json(payload)
@@ -133,8 +133,8 @@ update benchling
 """
 function update(config, endpoint::String, payload::Dict)
     # set the authentication header with the correct API key
-    auth_header = encode_key(config["benchling"]["api_key"])
-    url = "https://$(config["benchling"]["domain"])/api/v2/$endpoint?"
+    auth_header = encode_key(config["api_key"])
+    url = "https://$(config["domain"])/api/v2/$endpoint?"
 
     # convert payload to JSON string
     json_payload = JSON.json(payload)
@@ -163,7 +163,7 @@ function get_project_id(config)::String
     
     project_id = ""
     for project in projects_raw["projects"]
-        if project["name"] == config["benchling"]["project"]
+        if project["name"] == config["project"]
             project_id = project["id"]
             break
         end
