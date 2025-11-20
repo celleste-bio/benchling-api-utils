@@ -207,6 +207,7 @@ local function get_oauth_token(domain, client_id, client_secret)
         sink = ltn12.sink.table(response)
     }
 
+    local response_str = table.concat(response)
     if not success or status_code ~= 200 then
         io.stderr:write("Failed to get token:\n")
         io.stderr:write("Status: " .. tostring(status_code) .. "\n")
@@ -215,7 +216,6 @@ local function get_oauth_token(domain, client_id, client_secret)
         error("OAuth token request failed.")
     end
 
-    local response_str = table.concat(response)
     local token_data = json.decode(response_str)
     return token_data["access_token"]
 end
