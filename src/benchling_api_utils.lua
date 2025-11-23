@@ -9,6 +9,7 @@ local json = require("dkjson")
 config_example = {
     domain = "tenant.benchling.com",
     api_key = "sk_XXXXXXXXXXXXXXXX",
+    auth_type = "api_key", -- OR "oauth"
     project = "My Projects"
 }
 
@@ -19,18 +20,24 @@ local function encode_key(str)
 end
 
 -- URL-encode a string
-local function url_encode(str)
-    if str == nil then return "" end
-    str = tostring(str)
-    str = str:gsub("\n", "\r\n")
-    str = str:gsub("([^%w%-_%.%~])", function(c)
-        return string.format("%%%02X", string.byte(c))
-    end)
-    return str
+local function url_encode(url)
+    if type(url) ~= "string" then
+        error("Unsupported type given")
+    end
+    local encoded_url = url:gsub("\n", "\r\n")
+    encoded_url = encoded_url:gsub(
+        "([^%w%-_%.%~])",
+        function(c)
+            return string.format("%%%02X", string.byte(c))
+        end
+    )
+    
+    return encoded_url
 end
 
 local function length(containable)
     local cnt
+
     if type(containable) == "string" then
         cnt = #containable
     elseif type(containable) == "table" then
@@ -41,6 +48,7 @@ local function length(containable)
     else
         error("Unsupported type given")
     end
+
     return cnt
 end
 
@@ -94,22 +102,28 @@ local function api_request(url, credentials, method, payload, auth_type)
         auth_header = encode_key(credentials)
     end
 
-    local success_code, status_code, headers, status_text = http.request{
+    local success, status_code, headers, status_text = http.request{
         url = url,
         method = method,
         headers = {
             ["Accept"] = "application/json",
-            ["Authorization"] = auth_header
+            ["Authorization"] = auth_header,
+            ["Content-Type"] = payload and "application/json" or nil
         },
         body = payload,
         sink = ltn12.sink.table(response)
     }
+
+    if not success then
+        error("Request failed")
+    end
+
     local response_content = json.decode(table.concat(response))
     return response_content
 end
 
 -- Handles paginated API requests with optional endpoint parameters
-local function paginated_api_request(base_url, credentials, method, payload, endpoint_key, kwargs)
+local function paginated_api_request(base_url, credentials, method, payload, endpoint_key, kwargs, auth_type)
     local response_body = {}
     local next_token = ""
 
@@ -131,68 +145,58 @@ local function paginated_api_request(base_url, credentials, method, payload, end
             url = url .. "?" .. table.concat(endpoint_params, "&")
         end
 
-        local response_content = api_request(url, credentials, method, payload)
+        local response_content = api_request(url, credentials, method, payload, auth_type)
         
         if response_content[endpoint_key] then
             response_body = merge_nested_tables(response_body, response_content[endpoint_key])
         else
             response_body = response_content
         end
+
         next_token = response_content["nextToken"] or ""
     until next_token == ""
 
     return response_body
 end
 
--- Sends a GET request to Benchling API endpoint and returns collected results
+local function request_with_pagination(config, endpoint, method, payload, version, kwargs)
+    version = version or "v2"
+
+    -- Auto-detect key for paginated result extraction
+    local endpoint_key_map = {
+        ["v2"] = kebab_to_camel_case(endpoint),
+        ["v3-alpha"] = "items"
+    }
+
+    local endpoint_key = endpoint_key_map[version]
+    local credentials = config["api_key"]
+    local auth_type = config["auth_type"] or "api_key"
+
+    local base_url = string.format("https://%s/api/%s/%s", config["domain"], version, endpoint)
+
+    local response_body = paginated_api_request(
+        base_url,
+        credentials,
+        method,
+        payload and json.encode(payload) or nil,
+        endpoint_key,
+        kwargs,
+        auth_type
+    )
+
+    return response_body
+end
+
 local function query(config, endpoint, kwargs, version)
-	version = version or "v2"
-
-	local endpoint_key_map = {
-		["v2"] = kebab_to_camel_case(endpoint),
-		["v3-alpha"] = "items"
-	}
-
-	local endpoint_key = endpoint_key_map[version]
-    local credentials = config["api_key"]
-    local base_url = string.format("https://%s/api/%s/%s", config["domain"], version, endpoint)
-    local response_body = paginated_api_request(base_url, credentials, "GET", nil, endpoint_key, kwargs)
-        
-    return response_body
+    return request_with_pagination(config, endpoint, "GET", nil, version, kwargs)
 end
 
--- Sends a POST request to Benchling API endpoint and returns collected results
 local function create(config, endpoint, payload, version)
-	version = version or "v2"
-
-	local endpoint_key_map = {
-		["v2"] = kebab_to_camel_case(endpoint),
-		["v3-alpha"] = "items"
-	}
-
-	local endpoint_key = endpoint_key_map[version]
-    local credentials = config["api_key"]
-    local base_url = string.format("https://%s/api/%s/%s", config["domain"], version, endpoint)
-    local response_body = paginated_api_request(base_url, credentials, "POST", json.encode(payload), endpoint_key)
-        
-    return response_body
+    return request_with_pagination(config, endpoint, "POST", payload, version, nil)
 end
 
--- Sends a PATCH request to Benchling API endpoint and returns collected results
 local function update(config, endpoint, payload, version)
-	version = version or "v2"
-
-	local endpoint_key_map = {
-		["v2"] = kebab_to_camel_case(endpoint),
-		["v3-alpha"] = "items"
-	}
-
-	local endpoint_key = endpoint_key_map[version]
-    local credentials = config["api_key"]
-    local base_url = string.format("https://%s/api/%s/%s", config["domain"], version, endpoint)
-    local response_body = paginated_api_request(base_url, credentials, "PATCH", json.encode(payload), endpoint_key)
-        
-    return response_body
+    return request_with_pagination(config, endpoint, "PATCH", payload, version, nil)
 end
 
 -- Get OAuth2 token using client_credentials
@@ -216,17 +220,12 @@ local function get_oauth_token(domain, client_id, client_secret)
         sink = ltn12.sink.table(response)
     }
 
-    local response_str = table.concat(response)
     if not success or status_code ~= 200 then
-        io.stderr:write("Failed to get token:\n")
-        io.stderr:write("Status: " .. tostring(status_code) .. "\n")
-        io.stderr:write("Reason: " .. tostring(status) .. "\n")
-        io.stderr:write("Response body: " .. response_str .. "\n")
-        error("OAuth token request failed.")
+        error("OAuth token request failed")
     end
 
-    local token_data = json.decode(response_str)
-    return token_data["access_token"]
+    local decoded = json.decode(table.concat(response))
+    return decoded["access_token"]
 end
  
 api_utils.query = query
