@@ -83,14 +83,23 @@ local function kebab_to_camel_case(str)
 end
 
 -- Send api request
-local function api_request(url, credentials, method, payload)
+local function api_request(url, credentials, method, payload, auth_type)
     local response = {}
+    local auth_header
+
+    if auth_type == "oauth" then
+        auth_header = "Bearer " .. credentials
+    else
+        -- Default = API key
+        auth_header = encode_key(credentials)
+    end
+
     local success_code, status_code, headers, status_text = http.request{
         url = url,
         method = method,
         headers = {
             ["Accept"] = "application/json",
-            ["Authorization"] = encode_key(credentials)
+            ["Authorization"] = auth_header
         },
         body = payload,
         sink = ltn12.sink.table(response)
