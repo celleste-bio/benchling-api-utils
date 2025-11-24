@@ -92,38 +92,54 @@ end
 
 -- Send api request
 local function api_request(url, credentials, method, payload, auth_type)
-    local response = {}
-    local auth_header
+    local result = {}
 
+    local auth_header
     if auth_type == "oauth" then
         auth_header = "Bearer " .. credentials
+    -- elseif auth_type == "apikey" then
+    --     auth_header = encode_key(credentials)
     else
-        -- Default = API key
         auth_header = encode_key(credentials)
     end
 
-    local success, status_code, headers, status_text = http.request{
+    local headers = {
+        ["Accept"] = "application/json",
+        ["Authorization"] = auth_header
+    }
+
+    local request_source = nil
+    if payload ~= nil then
+        headers["Content-Type"] = "application/json"
+        request_source = ltn12.source.string(payload)
+    end
+
+    local response = {}
+    local success, status_code, response_headers, status_text = http.request{
         url = url,
         method = method,
-        headers = {
-            ["Accept"] = "application/json",
-            ["Authorization"] = auth_header,
-            ["Content-Type"] = payload and "application/json" or nil
-        },
-        body = payload,
+        headers = headers,
+        body = request_source,
         sink = ltn12.sink.table(response)
     }
 
-    if not success then
-        error("Request failed")
+       local raw = table.concat(response)
+
+    result.status_code = status_code
+    result.status_text = status_text
+    result.raw = raw
+
+    if raw:match("^%s*[{%[]") then
+        result.json = json.decode(raw)
+    else
+        result.json = nil
     end
 
-    local response_content = json.decode(table.concat(response))
-    return response_content
+    return result
 end
 
--- Handles paginated API requests with optional endpoint parameters
-local function paginated_api_request(base_url, credentials, method, payload, endpoint_key, kwargs, auth_type)
+-- Handles paginated API requests (GET) with optional endpoint parameters
+local function paginated_api_request(base_url, credentials, method, payload, endpoint_key, kwargs)
     local response_body = {}
     local next_token = ""
 
@@ -192,11 +208,35 @@ local function query(config, endpoint, kwargs, version)
 end
 
 local function create(config, endpoint, payload, version)
-    return request_with_pagination(config, endpoint, "POST", payload, version, nil)
+	version = version or "v2"
+
+	local endpoint_key_map = {
+		["v2"] = kebab_to_camel_case(endpoint),
+		["v3-alpha"] = "items"
+	}
+
+	local endpoint_key = endpoint_key_map[version]
+    local credentials = config["api_key"]
+    local base_url = string.format("https://%s/api/%s/%s", config["domain"], version, endpoint_key)
+    local response_body = api_request(base_url, credentials, "POST", json.encode(payload))
+    
+    return response_body
 end
 
 local function update(config, endpoint, payload, version)
-    return request_with_pagination(config, endpoint, "PATCH", payload, version, nil)
+	version = version or "v2"
+
+	local endpoint_key_map = {
+		["v2"] = kebab_to_camel_case(endpoint),
+		["v3-alpha"] = "items"
+	}
+
+	local endpoint_key = endpoint_key_map[version]
+    local credentials = config["api_key"]
+    local base_url = string.format("https://%s/api/%s/%s", config["domain"], version, endpoint_key)
+    local response_body = api_request(base_url, credentials, "PATCH", json.encode(payload))
+        
+    return response_body
 end
 
 -- Get OAuth2 token using client_credentials
