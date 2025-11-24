@@ -243,6 +243,7 @@ local function get_oauth_token(domain, client_id, client_secret)
     local token_url = string.format("https://%s/api/v2/token", domain)
     local credentials = client_id .. ":" .. client_secret
     local auth_header = "Basic " .. mime.b64(credentials)
+    -- local auth_header = "Bearer " .. credentials
 
     local response = {}
     local body = "grant_type=client_credentials"
@@ -260,7 +261,7 @@ local function get_oauth_token(domain, client_id, client_secret)
     }
 
     if not success or status_code ~= 200 then
-        error("OAuth token request failed")
+        error("OAuth token request failed: " .. table.concat(response))
     end
 
     local decoded = json.decode(table.concat(response))
