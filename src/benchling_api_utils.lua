@@ -123,19 +123,18 @@ local function api_request(url, credentials, method, payload, auth_type)
         sink = ltn12.sink.table(response)
     }
 
-       local raw = table.concat(response)
+    local raw = table.concat(response)
 
-    result.status_code = status_code
-    result.status_text = status_text
-    result.raw = raw
-
-    if raw:match("^%s*[{%[]") then
-        result.json = json.decode(raw)
-    else
-        result.json = nil
+    if not success or status_code < 200 or status_code >= 300 then
+        error(string.format("API request failed: %d %s\n%s", status_code, status_text, raw))
     end
 
-    return result
+    -- Return only the decoded JSON
+    if raw:match("^%s*[{%[]") then
+        return json.decode(raw)
+    else
+        return nil
+    end
 end
 
 -- Handles paginated API requests (GET) with optional endpoint parameters
