@@ -126,7 +126,12 @@ local function api_request(url, credentials, method, payload, auth_type)
     local raw = table.concat(response)
 
     if not success or status_code < 200 or status_code >= 300 then
-        error(string.format("API request failed: %d %s\n%s", status_code, status_text, raw))
+        error(string.format(
+            "API request failed: %d %s\n%s",
+            tonumber(status_code) or 0,
+            status_text or "",
+            raw or ""
+        ))
     end
 
     -- Return only the decoded JSON
