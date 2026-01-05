@@ -56,6 +56,14 @@ def create(config, endpoint, payload, version="v2"):
 def update(config, endpoint, payload, version="v2"):
     return request_handler(config, endpoint, "PATCH", payload, version)
 
+def get(config, endpoint, params=None, version="v2"):
+    domain = config["domain"]
+    api_key = config["api_key"]
+    base_url = f"https://{domain}/api/{version}/{endpoint}"
+    if params:
+        base_url += "?" + urlencode(params)
+    return api_request(base_url, api_key, "GET")
+
 def get_oauth_token(domain, client_id, client_secret):
     url = f"https://{domain}/api/v2/token"
     credentials = f"{client_id}:{client_secret}"
