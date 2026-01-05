@@ -56,6 +56,9 @@ def create(config, endpoint, payload, version="v2"):
 def update(config, endpoint, payload, version="v2"):
     return request_handler(config, endpoint, "PATCH", payload, version)
 
+def post(config, endpoint, payload, version="v2"):
+    return request_handler(config, endpoint, "POST", payload, version)
+
 def get(config, endpoint, params=None, version="v2"):
     domain = config["domain"]
     api_key = config["api_key"]
