@@ -243,6 +243,33 @@ local function update(config, endpoint, payload, version)
     return response_body
 end
 
+local function post(config, endpoint, payload, version)
+    version = version or "v2"
+    local credentials = config["api_key"]
+    local base_url = string.format("https://%s/api/%s/%s", config["domain"], version, endpoint)
+    local response_body = api_request(base_url, credentials, "POST", json.encode(payload))
+    return response_body
+end
+
+local function get(config, endpoint, kwargs, version)
+    version = version or "v2"
+    local credentials = config["api_key"]
+    local base_url = string.format("https://%s/api/%s/%s", config["domain"], version, endpoint)
+    
+    local endpoint_params = {}
+    if kwargs then
+        for key, value in pairs(kwargs) do
+            table.insert(endpoint_params, url_encode(key) .. "=" .. url_encode(value))
+        end
+    end
+    if #endpoint_params > 0 then
+        base_url = base_url .. "?" .. table.concat(endpoint_params, "&")
+    end
+
+    local response_body = api_request(base_url, credentials, "GET", nil)
+    return response_body
+end
+
 -- Get OAuth2 token using client_credentials
 local function get_oauth_token(domain, client_id, client_secret)
     local token_url = string.format("https://%s/api/v2/token", domain)
@@ -275,7 +302,11 @@ end
  
 api_utils.query = query
 api_utils.create = create
+api_utils.query = query
+api_utils.create = create
 api_utils.update = update
+api_utils.get = get
+api_utils.post = post
 api_utils.get_oauth_token = get_oauth_token
 
 -- Export the module

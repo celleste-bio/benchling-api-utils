@@ -10,6 +10,8 @@ import SHA
 export query
 export create
 export update
+export get
+export post
 export dump
 
 config_example = Dict{String, Any}(
@@ -142,6 +144,43 @@ function update(config, endpoint::String, payload::Dict)
     response = api_request(url, auth_header, "PATCH", payload=json_payload)
     # response_body = String(response.body)
     # return response_body
+end
+
+"""
+post benchling
+"""
+function post(config, endpoint::String, payload::Dict)
+    # set the authentication header with the correct API key
+    auth_header = encode_key(config["api_key"])
+    url = "https://$(config["domain"])/api/v2/$endpoint"
+
+    # convert payload to JSON string
+    json_payload = JSON.json(payload)
+
+    response = api_request(url, auth_header, "POST", payload=json_payload)
+    return response
+end
+
+"""
+get benchling (non-paginated)
+"""
+function get(config, endpoint::String; kwargs...)::Dict
+    # set the authentication header with the correct API key
+    auth_header = encode_key(config["api_key"])
+    url = "https://$(config["domain"])/api/v2/$endpoint?"
+
+    if !isempty(kwargs)
+        for (key, value) in kwargs
+            # simple url encoding might be needed here if not handled?
+            # Julia HTTP.request might handle some, but manual construction needs care.
+            # For parity with existing query implementation:
+            url *= "&$key=$value"
+        end
+    end
+
+    response = api_request(url, auth_header, "GET")
+    body_string = String(response.body)
+    return JSON.parse(body_string)
 end
 
 function dump(config, endpoints::String[], dump_file::String)
