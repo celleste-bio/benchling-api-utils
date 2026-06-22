@@ -6,7 +6,7 @@ Thin wrapper for the Benchling REST API.
 
 Core components::
 
-    from benchling_api_utils import BenchlingClient, OAuthTokenProvider, BenchlingApiError
+    from benchling_api_utils import BenchlingClient, OAuthTokenProvider, ApiError
 
     client = BenchlingClient.from_credentials(domain, client_id, client_secret)
 
@@ -20,12 +20,12 @@ Endpoint helpers::
 
 from .auth import OAuthTokenProvider
 from .client import BenchlingClient
-from .errors import BenchlingApiError
+from .errors import ApiError
 from . import helpers
 
 __all__ = [
     "BenchlingClient",
-    "BenchlingApiError",
+    "ApiError",
     "OAuthTokenProvider",
     "helpers",
 ]

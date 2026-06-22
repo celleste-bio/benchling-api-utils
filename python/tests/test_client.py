@@ -6,7 +6,7 @@ import requests as req
 
 from benchling_api_utils.auth import OAuthTokenProvider
 from benchling_api_utils.client import BenchlingClient, RETRYABLE_STATUS_CODES
-from benchling_api_utils.errors import BenchlingApiError
+from benchling_api_utils.errors import ApiError
 
 
 def _make_response(status_code, json_data=None, headers=None):
@@ -57,7 +57,7 @@ def test_bearer_token_sent_in_header():
 def test_4xx_non_retryable_raises_immediately():
     client, _ = _make_client()
     with patch("requests.request", return_value=_make_response(404)) as mock_req:
-        with pytest.raises(BenchlingApiError) as exc_info:
+        with pytest.raises(ApiError) as exc_info:
             client.get("custom-entities/missing")
     assert exc_info.value.status_code == 404
     assert mock_req.call_count == 1  # no retries
@@ -85,7 +85,7 @@ def test_exhausts_retries_and_raises():
     client, _ = _make_client(max_retries=2)
     with patch("requests.request", return_value=_make_response(500)):
         with patch("time.sleep"):
-            with pytest.raises(BenchlingApiError) as exc_info:
+            with pytest.raises(ApiError) as exc_info:
                 client.get("some-endpoint")
     assert exc_info.value.status_code == 500
 

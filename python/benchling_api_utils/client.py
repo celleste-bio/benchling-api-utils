@@ -10,7 +10,7 @@ from typing import Any
 import requests
 
 from .auth import OAuthTokenProvider
-from .errors import BenchlingApiError
+from .errors import ApiError
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +26,7 @@ class BenchlingClient:
       - Retry with exponential backoff on transient errors
       - Optional inter-request rate limiting
       - nextToken pagination (iterator and eager list)
-      - Structured BenchlingApiError on failures
+      - Structured ApiError on failures
       - Structured debug/warning logging per request
 
     Not responsible for business logic, entity-specific methods, or idempotency.
@@ -89,10 +89,10 @@ class BenchlingClient:
         Execute a single HTTP request with retry logic.
 
         Returns the parsed JSON body, or {} for empty 2xx responses.
-        Raises BenchlingApiError on non-retryable failures or exhausted retries.
+        Raises ApiError on non-retryable failures or exhausted retries.
         """
         url = f"https://{self._domain}/api/{version}/{endpoint.lstrip('/')}"
-        last_exc: BenchlingApiError | None = None
+        last_exc: ApiError | None = None
 
         for attempt in range(1, self._max_retries + 1):
             self._enforce_rate_limit()
@@ -118,7 +118,7 @@ class BenchlingClient:
                 )
             except requests.RequestException as exc:
                 logger.warning("Network error %s %s attempt=%d: %s", method, endpoint, attempt, exc)
-                last_exc = BenchlingApiError(str(exc), endpoint=endpoint)
+                last_exc = ApiError(str(exc), endpoint=endpoint)
                 self._sleep(attempt)
                 continue
 
@@ -127,7 +127,7 @@ class BenchlingClient:
                     logger.warning("401 on %s %s — invalidating token (attempt %d)", method, endpoint, attempt)
                     self._token_provider.invalidate()
                     continue
-                raise BenchlingApiError(
+                raise ApiError(
                     f"Unauthorized: {method} {endpoint}",
                     status_code=401,
                     response_text=resp.text[:2000],
@@ -143,7 +143,7 @@ class BenchlingClient:
                     self._sleep(attempt, resp)
                     continue
                 # fall through to raise on last attempt
-                raise BenchlingApiError(
+                raise ApiError(
                     f"Exhausted {self._max_retries} retries: {method} {endpoint} → {resp.status_code}",
                     status_code=resp.status_code,
                     response_text=resp.text[:2000],
@@ -151,7 +151,7 @@ class BenchlingClient:
                 )
 
             if resp.status_code >= 400:
-                raise BenchlingApiError(
+                raise ApiError(
                     f"{method} {endpoint} → {resp.status_code}",
                     status_code=resp.status_code,
                     response_text=resp.text[:2000],
@@ -161,7 +161,7 @@ class BenchlingClient:
             logger.debug("%s %s → %d", method, endpoint, resp.status_code)
             return resp.json() if resp.content else {}
 
-        raise last_exc or BenchlingApiError(
+        raise last_exc or ApiError(
             f"Exhausted {self._max_retries} retries: {method} {endpoint}",
             endpoint=endpoint,
         )

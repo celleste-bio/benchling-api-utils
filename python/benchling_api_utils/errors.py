@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 
-class BenchlingApiError(Exception):
+class ApiError(Exception):
     """Raised when a Benchling API call fails after all retries."""
 
     def __init__(
@@ -41,6 +41,6 @@ class BenchlingApiError(Exception):
 
     def __repr__(self) -> str:
         return (
-            f"BenchlingApiError(status_code={self.status_code!r}, "
+            f"ApiError(status_code={self.status_code!r}, "
             f"endpoint={self.endpoint!r}, message={str(self)!r})"
         )
