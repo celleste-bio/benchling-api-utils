@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "benchling-api-utils"
+version = "0.2.0"
+description = "Thin wrapper for the Benchling REST API"
+requires-python = ">=3.11"
+dependencies = [
+    "requests>=2.31.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-mock>=3.12",
+]
+
+[tool.setuptools.packages.find]
+where = ["python"]
+include = ["benchling_api_utils*"]
+
+[tool.pytest.ini_options]
+testpaths = ["python/tests"]
